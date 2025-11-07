@@ -691,6 +691,8 @@ import { ref, watch, reactive, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useBookingStore } from "../stores/bookingStore";
 const bookingStore = useBookingStore();
+import { base_url } from "./api";
+import { APP_URL } from "./api";
 
 import SignaturePad from "signature_pad";
 const consultants = ref([]);
@@ -814,8 +816,8 @@ async function fetchDropdownData() {
   console.log("fetchDropdownData");
   try {
     const [consultantRes, mediumRes] = await Promise.all([
-      fetch("http://127.0.0.1:8000/api/consultant"),
-      fetch("http://127.0.0.1:8000/api/consultant"),
+      fetch(`${APP_URL}/consultant`),
+      fetch(`${APP_URL}/consultant`),
     ]);
 
     const consultantData = await consultantRes.json();
@@ -855,7 +857,7 @@ async function saveSignature() {
   errors.signature = "";
 
   try {
-    const res = await fetch("http://localhost:8080/", {
+    const res = await fetch(`${base_url}/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signature: dataURL }),
@@ -910,7 +912,7 @@ function validateConfirmStep() {
   if (!formData.medium) errors.medium = "Medium selection is required.";
   if (!formData.care) errors.care = "Select Type";
 
-  return !errors.consultant && !errors.medium;
+  return !errors.consultant && !errors.medium && !errors.care;
 }
 
 function validateStep1() {
@@ -1007,7 +1009,7 @@ async function saveOfflinePayment() {
   errors.payment_method = "";
 
   try {
-    const res = await fetch("https://192.168.1.120/coeapi/payment/", {
+    const res = await fetch(`${base_url}/coeapi/payment/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1046,7 +1048,7 @@ function validateTerms() {
 // --- Razorpay ---
 async function payOnline() {
   try {
-    const res = await fetch("http://localhost:8080/create_order.php", {
+    const res = await fetch(`${base_url}/create_order.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: 100 }),
@@ -1089,7 +1091,7 @@ async function payOnline() {
 // --- Save Payment ---
 async function savePayment(data) {
   try {
-    await fetch("https://192.168.1.120/coeapi/payment/", {
+    await fetch(`${base_url}/coeapi/payment/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1106,7 +1108,7 @@ async function savePayment(data) {
 // --- Submit Form ---
 async function submitForm() {
   try {
-    const res = await fetch("https://192.168.1.120/coeapi/register/", {
+    const res = await fetch(`${base_url}/coeapi/register/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
