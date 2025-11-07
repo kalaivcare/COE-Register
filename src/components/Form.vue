@@ -690,7 +690,6 @@ const currentTreatment = ref("skin");
 function switchTreatment(treatment) {
   currentTreatment.value = treatment.toLowerCase();
 }
-// --- Reactive Data ---
 const steps = ["info", "terms", "sign", "pay", "confirm"];
 const currentStep = ref(0);
 const router = useRouter();
@@ -734,7 +733,6 @@ let signaturePadInitialized = false;
 onMounted(() => {
   signaturePad = new SignaturePad(canvas.value);
   window.addEventListener("resize", resizeCanvas);
-  // Calculate the max DOB allowed (today minus 18 years)
   const today = new Date();
 
   const minAgeDate = new Date(
@@ -745,9 +743,7 @@ onMounted(() => {
 
   maxDob.value = minAgeDate.toISOString().split("T")[0];
 
-  console.log("today", maxDob.value);
   formData.dob = maxDob.value;
-  console.log("formData.value.dob", formData.dob);
 });
 
 const stepLabels = {
@@ -838,8 +834,6 @@ async function saveSignature() {
     if (!res.ok) {
       throw new Error(data.message || "Failed to save signature");
     }
-
-    console.log("Signature saved successfully", data);
     checksign.value = true;
     return true;
   } catch (err) {
@@ -895,7 +889,6 @@ function validateStep1() {
   errors.gender = "";
   errors.pincode = "";
   errors.address = "";
-  console.log(formData.mobile.trim());
 
   if (!formData.name.trim()) errors.name = "Name is required.";
   if (!formData.mobile.trim()) errors.mobile = "Mobile is required.";
@@ -999,7 +992,6 @@ async function saveOfflinePayment() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to save payment");
 
-    console.log("Offline payment saved:", data);
     formData.payment_done = true;
     return true;
   } catch (err) {
