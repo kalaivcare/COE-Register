@@ -603,8 +603,8 @@
                       type="radio"
                       name="care"
                       value="hair"
+                      @change="clearError('care')"
                       v-model="formData.care"
-                      checked=""
                     />
                     Hair
                   </label>
@@ -613,6 +613,7 @@
                       type="radio"
                       name="care"
                       value="skin"
+                      @change="clearError('care')"
                       v-model="formData.care"
                     />
                     Skin
@@ -622,14 +623,14 @@
                       type="radio"
                       name="care"
                       value="both"
+                      @change="clearError('care')"
                       v-model="formData.care"
                     />
                     Both
                   </label>
-                  <span
-                    class="text-red-500 hidden error"
-                    id="care-error"
-                  ></span>
+                  <span v-if="errors.care" class="text-red-500">
+                    {{ errors.care }}
+                  </span>
                 </div>
               </div>
               <div class="flex gap-5 items-baseline justify-between my-2">
@@ -876,6 +877,7 @@ function validateConfirmStep() {
   if (!formData.consultant)
     errors.consultant = "Consultant selection is required.";
   if (!formData.medium) errors.medium = "Medium selection is required.";
+  if (!formData.care) errors.care = "Select Type";
 
   return !errors.consultant && !errors.medium;
 }
