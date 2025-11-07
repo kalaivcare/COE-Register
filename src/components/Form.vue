@@ -565,9 +565,13 @@
                       class="select select-bordered w-full"
                     >
                       <option disabled selected>Select Consultant</option>
-                      <option>one</option>
-                      <option>two</option>
-                      <option>Other</option>
+                      <option
+                        v-for="consultant in consultants"
+                        :key="consultant.id"
+                        :value="consultant.id"
+                      >
+                        {{ consultant.first_name }} {{ consultant.last_name }}
+                      </option>
                     </select>
                     <span v-if="errors.consultant" class="text-red-500">
                       {{ errors.consultant }}
@@ -582,9 +586,13 @@
                       @change="clearError('medium')"
                     >
                       <option disabled selected>Select Medium</option>
-                      <option>one</option>
-                      <option>two</option>
-                      <option>Other</option>
+                      <option
+                        v-for="medium in mediums"
+                        :key="medium.id"
+                        :value="medium.id"
+                      >
+                        {{ medium.name }}
+                      </option>
                     </select>
                     <span v-if="errors.medium" class="text-red-500">
                       {{ errors.medium }}
@@ -685,7 +693,8 @@ import { useBookingStore } from "../stores/bookingStore";
 const bookingStore = useBookingStore();
 
 import SignaturePad from "signature_pad";
-
+const consultants = ref([]);
+const mediums = ref([]);
 const currentTreatment = ref("skin");
 
 function switchTreatment(treatment) {
@@ -745,6 +754,8 @@ onMounted(() => {
   maxDob.value = minAgeDate.toISOString().split("T")[0];
 
   formData.dob = maxDob.value;
+
+  fetchDropdownData();
 });
 
 const stepLabels = {
@@ -799,6 +810,26 @@ watch(currentStep, (newStep) => {
     }, 300);
   }
 });
+async function fetchDropdownData() {
+  console.log("fetchDropdownData");
+  try {
+    const [consultantRes, mediumRes] = await Promise.all([
+      fetch("http://127.0.0.1:8000/api/consultant"),
+      fetch("http://127.0.0.1:8000/api/consultant"),
+    ]);
+
+    const consultantData = await consultantRes.json();
+    console.log("consultantData", consultantData);
+    const mediumData = await mediumRes.json();
+    console.log("mediumData", mediumData);
+
+    consultants.value = consultantData.data || [];
+    mediums.value = mediumData.data || [];
+    console.log(" mediums.value", mediums.value);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+}
 
 function clearSignature() {
   signaturePad.clear();
@@ -824,7 +855,7 @@ async function saveSignature() {
   errors.signature = "";
 
   try {
-    const res = await fetch("http://localhost:8000/", {
+    const res = await fetch("http://localhost:8080/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signature: dataURL }),
@@ -1015,7 +1046,7 @@ function validateTerms() {
 // --- Razorpay ---
 async function payOnline() {
   try {
-    const res = await fetch("http://localhost:8000/create_order.php", {
+    const res = await fetch("http://localhost:8080/create_order.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: 100 }),
@@ -1080,7 +1111,7 @@ async function submitForm() {
       headers: {
         "Content-Type": "application/json",
         Authorization:
-          "Bearer basic b8e7f61d5d63a23ad24157404976042ec6df8893b09ebe19ef468ba536fdbb14",
+          "Bearer b8e7f61d5d63a23ad24157404976042ec6df8893b09ebe19ef468ba536fdbb14",
       },
       body: JSON.stringify(formData),
     });
