@@ -591,7 +591,7 @@
                         :key="medium.id"
                         :value="medium.id"
                       >
-                        {{ medium.name }}
+                        {{ medium.first_name }} {{ medium.last_name }}
                       </option>
                     </select>
                     <span v-if="errors.medium" class="text-red-500">
@@ -746,18 +746,10 @@ onMounted(() => {
   signaturePad = new SignaturePad(canvas.value);
   window.addEventListener("resize", resizeCanvas);
   const today = new Date();
+  today.setFullYear(today.getFullYear() - 18);
+  maxDob.value = today.toISOString().split("T")[0];
 
-  const minAgeDate = new Date(
-    today.getFullYear() - 18,
-    today.getMonth(),
-    today.getDate()
-  );
-
-  maxDob.value = minAgeDate.toISOString().split("T")[0];
-
-  formData.dob = maxDob.value;
-
-  fetchDropdownData();
+  // fetchDropdownData();
 });
 
 const stepLabels = {
@@ -813,7 +805,6 @@ watch(currentStep, (newStep) => {
   }
 });
 async function fetchDropdownData() {
-  console.log("fetchDropdownData");
   try {
     const [consultantRes, mediumRes] = await Promise.all([
       fetch(`${APP_URL}/consultant`),
@@ -821,13 +812,10 @@ async function fetchDropdownData() {
     ]);
 
     const consultantData = await consultantRes.json();
-    console.log("consultantData", consultantData);
     const mediumData = await mediumRes.json();
-    console.log("mediumData", mediumData);
 
     consultants.value = consultantData.data || [];
     mediums.value = mediumData.data || [];
-    console.log(" mediums.value", mediums.value);
   } catch (error) {
     console.error("Error fetching data:", error);
   }
@@ -882,6 +870,8 @@ async function handleNext() {
   if (currentStep.value === 1 && !validateTerms()) return;
   if (currentStep.value === 2 && !validateSignature()) return;
   if (currentStep.value === 3) {
+    fetchDropdownData();
+
     if (formData.payment_method === "online") {
       if (!formData.payment_done) {
         errors.payment_method = "Please complete your online payment.";
@@ -1009,7 +999,7 @@ async function saveOfflinePayment() {
   errors.payment_method = "";
 
   try {
-    const res = await fetch(`${base_url}/coeapi/payment/`, {
+    const res = await fetch(`${base_url}/payment/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1025,9 +1015,13 @@ async function saveOfflinePayment() {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to save payment");
+    if (res.ok) {
+      formData.payment_id = data.data.paymentId || null;
+      formData.payment_done = true;
+    } else {
+      throw new Error(data.message || "Failed to save payment");
+    }
 
-    formData.payment_done = true;
     return true;
   } catch (err) {
     console.error("Error saving offline payment:", err);
@@ -1045,8 +1039,8 @@ function validateTerms() {
   return true;
 }
 
-// --- Razorpay ---
 async function payOnline() {
+  errors.payment_method = "";
   try {
     const res = await fetch(`${base_url}/create_order.php`, {
       method: "POST",
@@ -1067,15 +1061,15 @@ async function payOnline() {
       description: "Payment for Registration",
       order_id: order.id,
       handler: async (response) => {
+        const amountInRupees = order.amount / 100;
         formData.payment_id = response.razorpay_payment_id;
         formData.payment_type = "online";
         await savePayment({
           payment_id: response.razorpay_payment_id,
           razor_order_id: response.razorpay_order_id,
-          amount: "100",
+          amount: amountInRupees.toString(),
           status: "success",
         });
-        formData.payment_done = true;
       },
       theme: { color: "#9b0032" },
     };
@@ -1084,14 +1078,13 @@ async function payOnline() {
     rzp.open();
   } catch (err) {
     console.error("Payment error:", err);
-    errors.payment_method = "Online payment failed.";
+    errors.payment_method = err;
   }
 }
 
-// --- Save Payment ---
 async function savePayment(data) {
   try {
-    await fetch(`${base_url}/coeapi/payment/`, {
+    const res = await fetch(`${base_url}/payment/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1100,15 +1093,25 @@ async function savePayment(data) {
       },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      throw new Error(`HTTP error! Status: ${res.message}`);
+    }
+    const result = await res.json();
+    if (result.error) {
+      throw new Error(result.message);
+    } else {
+      formData.payment_done = true;
+      return result;
+    }
   } catch (err) {
     console.error("Payment API failed:", err);
+    errors.payment_method = err;
   }
 }
 
-// --- Submit Form ---
 async function submitForm() {
   try {
-    const res = await fetch(`${base_url}/coeapi/register/`, {
+    const res = await fetch(`${base_url}/register/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
