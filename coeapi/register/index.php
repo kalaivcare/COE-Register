@@ -2,6 +2,7 @@
 include $_SERVER['DOCUMENT_ROOT'] . '/coeapi/db.php';
 
 include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/Token.php';
+
 if (isset($data['payment_id']) && $data['payment_id'] != null) {
    
     $sql1 = "SELECT id FROM payment WHERE payment_id = :payment_id";
@@ -44,14 +45,14 @@ if ($lastReg && isset($lastReg['registration_no'])) {
 }
 
 $numberPart = str_pad($newNumber, 6, '0', STR_PAD_LEFT);
-
 $registration_no = $prefix . $yearCode . $numberPart;
     
-$sql = "INSERT INTO registrations (registration_no,name,mobile,gender,email, dob,occupation,address,pincode,signature,
+$sql = "INSERT INTO registrations (registration_no,name,mobile,gender,email, dob,occupation,address,pincode,signature,qr_code,
 terms_accepted,payment_type,payment_id,consultant_id,medium_id,registration_type,email_alert,whatsapp_alert,
 created_at,updated_at) VALUES (:registration_no,:name,:mobile,  :gender,:email,:dob,:occupation,:address,:pincode,
-    :signature,:terms_accepted,:payment_type,:payment_id,:consultant_id,:medium_id,:registration_type,:email_alert,
+    :signature,:qrcode,:terms_accepted,:payment_type,:payment_id,:consultant_id,:medium_id,:registration_type,:email_alert,
 :whatsapp_alert,NOW(),NOW())";
+
 
 
 $query = $dbh->prepare($sql);
@@ -81,6 +82,8 @@ if (!preg_match('/^[0-9]{10}$/', $data['mobile'])) {
     ]);
     exit;
 }
+include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/qr/generate.php';
+$qrcode = generateQRCode($data['mobile']);
 $query->bindParam(':registration_no', $registration_no);
 $query->bindParam(':name', $data['name']);
 $query->bindParam(':mobile', $data['mobile']);
@@ -91,6 +94,7 @@ $query->bindParam(':occupation', $data['occupation']);
 $query->bindParam(':address', $data['address']);
 $query->bindParam(':pincode', $data['pincode']);
 $query->bindParam(':signature', $data['signature']);
+$query->bindParam(':qrcode', $qrcode);
 $query->bindParam(':terms_accepted', $data['terms']);
 $query->bindParam(':payment_type', $data['payment_method']);
 $query->bindParam(':payment_id', $payment_id);
