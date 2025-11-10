@@ -4,6 +4,7 @@ include $_SERVER['DOCUMENT_ROOT'] . '/coeapi/db.php';
 include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/Token.php';
 
 if (isset($data['payment_id']) && $data['payment_id'] != null) {
+    
    
     $sql1 = "SELECT id FROM payment WHERE payment_id = :payment_id";
     $query1 = $dbh->prepare($sql1);
@@ -43,7 +44,7 @@ if ($lastReg && isset($lastReg['registration_no'])) {
 } else {
     $newNumber = 1;
 }
-
+$tnX=$data['payment_id'];
 $numberPart = str_pad($newNumber, 6, '0', STR_PAD_LEFT);
 $registration_no = $prefix . $yearCode . $numberPart;
     
@@ -108,6 +109,9 @@ $query->execute();
 $responseData = $data;             
 $responseData['register_no'] = $registration_no;  
 $responseData['payment_id'] = $payment_id;
+$responseData['qr_code'] = $qrcode;
+$responseData['booking_pay_id']=$tnX;
+
 $user_id = $dbh->lastInsertId() ?? null;
 
 

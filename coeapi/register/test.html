@@ -565,13 +565,9 @@
                       class="select select-bordered w-full"
                     >
                       <option disabled selected>Select Consultant</option>
-                      <option
-                        v-for="consultant in consultants"
-                        :key="consultant.id"
-                        :value="consultant.id"
-                      >
-                        {{ consultant.first_name }} {{ consultant.last_name }}
-                      </option>
+                      <option>one</option>
+                      <option>two</option>
+                      <option>Other</option>
                     </select>
                     <span v-if="errors.consultant" class="text-red-500">
                       {{ errors.consultant }}
@@ -586,13 +582,9 @@
                       @change="clearError('medium')"
                     >
                       <option disabled selected>Select Medium</option>
-                      <option
-                        v-for="medium in mediums"
-                        :key="medium.id"
-                        :value="medium.id"
-                      >
-                        {{ medium.first_name }} {{ medium.last_name }}
-                      </option>
+                      <option>one</option>
+                      <option>two</option>
+                      <option>Other</option>
                     </select>
                     <span v-if="errors.medium" class="text-red-500">
                       {{ errors.medium }}
@@ -611,8 +603,8 @@
                       type="radio"
                       name="care"
                       value="hair"
-                      @change="clearError('care')"
                       v-model="formData.care"
+                      checked=""
                     />
                     Hair
                   </label>
@@ -621,7 +613,6 @@
                       type="radio"
                       name="care"
                       value="skin"
-                      @change="clearError('care')"
                       v-model="formData.care"
                     />
                     Skin
@@ -631,14 +622,14 @@
                       type="radio"
                       name="care"
                       value="both"
-                      @change="clearError('care')"
                       v-model="formData.care"
                     />
                     Both
                   </label>
-                  <span v-if="errors.care" class="text-red-500">
-                    {{ errors.care }}
-                  </span>
+                  <span
+                    class="text-red-500 hidden error"
+                    id="care-error"
+                  ></span>
                 </div>
               </div>
               <div class="flex gap-5 items-baseline justify-between my-2">
@@ -691,17 +682,15 @@ import { ref, watch, reactive, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useBookingStore } from "../stores/bookingStore";
 const bookingStore = useBookingStore();
-import { base_url } from "./api";
-import { APP_URL } from "./api";
 
 import SignaturePad from "signature_pad";
-const consultants = ref([]);
-const mediums = ref([]);
+
 const currentTreatment = ref("skin");
 
 function switchTreatment(treatment) {
   currentTreatment.value = treatment.toLowerCase();
 }
+// --- Reactive Data ---
 const steps = ["info", "terms", "sign", "pay", "confirm"];
 const currentStep = ref(0);
 const router = useRouter();
@@ -728,7 +717,7 @@ const formData = reactive({
   payment_done: false,
   terms: false,
   consultant: "",
-  care: "hair",
+  care: "",
   medium: "",
   email_confirm: true,
   whatsapp_confirm: true,
@@ -745,11 +734,20 @@ let signaturePadInitialized = false;
 onMounted(() => {
   signaturePad = new SignaturePad(canvas.value);
   window.addEventListener("resize", resizeCanvas);
+  // Calculate the max DOB allowed (today minus 18 years)
   const today = new Date();
-  today.setFullYear(today.getFullYear() - 18);
-  maxDob.value = today.toISOString().split("T")[0];
 
-  // fetchDropdownData();
+  const minAgeDate = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate()
+  );
+
+  maxDob.value = minAgeDate.toISOString().split("T")[0];
+
+  console.log("today", maxDob.value);
+  formData.dob = maxDob.value;
+  console.log("formData.value.dob", formData.dob);
 });
 
 const stepLabels = {
@@ -804,22 +802,6 @@ watch(currentStep, (newStep) => {
     }, 300);
   }
 });
-async function fetchDropdownData() {
-  try {
-    const [consultantRes, mediumRes] = await Promise.all([
-      fetch(`${APP_URL}/consultant`),
-      fetch(`${APP_URL}/consultant`),
-    ]);
-
-    const consultantData = await consultantRes.json();
-    const mediumData = await mediumRes.json();
-
-    consultants.value = consultantData.data || [];
-    mediums.value = mediumData.data || [];
-  } catch (error) {
-    console.error("Error fetching data:", error);
-  }
-}
 
 function clearSignature() {
   signaturePad.clear();
@@ -845,7 +827,7 @@ async function saveSignature() {
   errors.signature = "";
 
   try {
-    const res = await fetch(`${base_url}/`, {
+    const res = await fetch("http://localhost:8000/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signature: dataURL }),
@@ -856,6 +838,8 @@ async function saveSignature() {
     if (!res.ok) {
       throw new Error(data.message || "Failed to save signature");
     }
+
+    console.log("Signature saved successfully", data);
     checksign.value = true;
     return true;
   } catch (err) {
@@ -870,8 +854,6 @@ async function handleNext() {
   if (currentStep.value === 1 && !validateTerms()) return;
   if (currentStep.value === 2 && !validateSignature()) return;
   if (currentStep.value === 3) {
-    fetchDropdownData();
-
     if (formData.payment_method === "online") {
       if (!formData.payment_done) {
         errors.payment_method = "Please complete your online payment.";
@@ -900,9 +882,8 @@ function validateConfirmStep() {
   if (!formData.consultant)
     errors.consultant = "Consultant selection is required.";
   if (!formData.medium) errors.medium = "Medium selection is required.";
-  if (!formData.care) errors.care = "Select Type";
 
-  return !errors.consultant && !errors.medium && !errors.care;
+  return !errors.consultant && !errors.medium;
 }
 
 function validateStep1() {
@@ -914,6 +895,7 @@ function validateStep1() {
   errors.gender = "";
   errors.pincode = "";
   errors.address = "";
+  console.log(formData.mobile.trim());
 
   if (!formData.name.trim()) errors.name = "Name is required.";
   if (!formData.mobile.trim()) errors.mobile = "Mobile is required.";
@@ -991,21 +973,15 @@ async function saveOfflinePayment() {
       errors.payment_method = "Please enter transaction number and amount.";
       return false;
     }
-    if (!formData.offline_amount || formData.offline_amount <= 0) {
-      errors.payment_method = "Please enter a valid amount.";
-      return false;
-    }
-  } else if (formData.offline_type === "cash") {
-    if (!formData.offline_amount || formData.offline_amount <= 0) {
-      errors.payment_method = "Please enter a valid amount.";
-      return false;
-    }
+  } else if (formData.offline_type === "cash" && !formData.offline_amount) {
+    errors.payment_method = "Please enter amount.";
+    return false;
   }
 
   errors.payment_method = "";
 
   try {
-    const res = await fetch(`${base_url}/payment/`, {
+    const res = await fetch("https://192.168.1.120/coeapi/payment/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1021,13 +997,10 @@ async function saveOfflinePayment() {
     });
 
     const data = await res.json();
-    if (res.ok) {
-      formData.payment_id = data.data.paymentId || null;
-      formData.payment_done = true;
-    } else {
-      throw new Error(data.message || "Failed to save payment");
-    }
+    if (!res.ok) throw new Error(data.message || "Failed to save payment");
 
+    console.log("Offline payment saved:", data);
+    formData.payment_done = true;
     return true;
   } catch (err) {
     console.error("Error saving offline payment:", err);
@@ -1045,10 +1018,10 @@ function validateTerms() {
   return true;
 }
 
+// --- Razorpay ---
 async function payOnline() {
-  errors.payment_method = "";
   try {
-    const res = await fetch(`${base_url}/create_order.php`, {
+    const res = await fetch("http://localhost:8000/create_order.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: 100 }),
@@ -1067,15 +1040,15 @@ async function payOnline() {
       description: "Payment for Registration",
       order_id: order.id,
       handler: async (response) => {
-        const amountInRupees = order.amount / 100;
         formData.payment_id = response.razorpay_payment_id;
         formData.payment_type = "online";
         await savePayment({
           payment_id: response.razorpay_payment_id,
           razor_order_id: response.razorpay_order_id,
-          amount: amountInRupees.toString(),
+          amount: "100",
           status: "success",
         });
+        formData.payment_done = true;
       },
       theme: { color: "#9b0032" },
     };
@@ -1084,13 +1057,14 @@ async function payOnline() {
     rzp.open();
   } catch (err) {
     console.error("Payment error:", err);
-    errors.payment_method = err;
+    errors.payment_method = "Online payment failed.";
   }
 }
 
+// --- Save Payment ---
 async function savePayment(data) {
   try {
-    const res = await fetch(`${base_url}/payment/`, {
+    await fetch("https://192.168.1.120/coeapi/payment/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1099,30 +1073,20 @@ async function savePayment(data) {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      throw new Error(`HTTP error! Status: ${res.message}`);
-    }
-    const result = await res.json();
-    if (result.error) {
-      throw new Error(result.message);
-    } else {
-      formData.payment_done = true;
-      return result;
-    }
   } catch (err) {
     console.error("Payment API failed:", err);
-    errors.payment_method = err;
   }
 }
 
+// --- Submit Form ---
 async function submitForm() {
   try {
-    const res = await fetch(`${base_url}/register/`, {
+    const res = await fetch("https://192.168.1.120/coeapi/register/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization:
-          "Bearer b8e7f61d5d63a23ad24157404976042ec6df8893b09ebe19ef468ba536fdbb14",
+          "Bearer basic b8e7f61d5d63a23ad24157404976042ec6df8893b09ebe19ef468ba536fdbb14",
       },
       body: JSON.stringify(formData),
     });
