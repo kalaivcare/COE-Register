@@ -1,44 +1,10 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-ini_set('display_errors', 1);
-ini_set('error_reporting', E_ALL);
-//key :: b8e7f61d5d63a23ad24157404976042ec6df8893b09ebe19ef468ba536fdbb14
-// include_once('db.php');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/db.php';
+include $_SERVER['DOCUMENT_ROOT'] . '/coeapi/db.php';
 
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
-$rawData = file_get_contents('php://input');
-
-$data = json_decode($rawData, true);
-
-
-$receivedHash = substr($authHeader, 7);
-
-$serverUsername = "V(@reTrich0l0gy";
-$serverPassword = "V(@reTrich0l0gy";
-$salt = "V(@reNEW";
-
-$expectedHash = hash('sha256', $serverUsername . ":" . $serverPassword . $salt);
-
-if ($receivedHash !== $expectedHash) {
-    header('HTTP/1.0 403 Forbidden');
-    echo json_encode(["status" => 403, "error" => true, "message" => "Invalid credentials"]);
-    exit;
-}
-
-if(!isset($_POST)) {
-    echo json_encode(["status" => 403, "error" => true, "message" => "Data missing from request"]);
-    exit;
-}
+include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/Token.php';
 
 if (isset($data['payment_id']) && $data['payment_id'] != null) {
+    
    
     $sql1 = "SELECT id FROM payment WHERE payment_id = :payment_id";
     $query1 = $dbh->prepare($sql1);
@@ -78,16 +44,16 @@ if ($lastReg && isset($lastReg['registration_no'])) {
 } else {
     $newNumber = 1;
 }
-
+$tnX=$data['payment_id'];
 $numberPart = str_pad($newNumber, 6, '0', STR_PAD_LEFT);
-
 $registration_no = $prefix . $yearCode . $numberPart;
     
-$sql = "INSERT INTO registrations (registration_no,name,mobile,gender,email, dob,occupation,address,pincode,signature,
+$sql = "INSERT INTO registrations (registration_no,name,mobile,gender,email, dob,occupation,address,pincode,signature,qr_code,
 terms_accepted,payment_type,payment_id,consultant_id,medium_id,registration_type,email_alert,whatsapp_alert,
 created_at,updated_at) VALUES (:registration_no,:name,:mobile,  :gender,:email,:dob,:occupation,:address,:pincode,
-    :signature,:terms_accepted,:payment_type,:payment_id,:consultant_id,:medium_id,:registration_type,:email_alert,
+    :signature,:qrcode,:terms_accepted,:payment_type,:payment_id,:consultant_id,:medium_id,:registration_type,:email_alert,
 :whatsapp_alert,NOW(),NOW())";
+
 
 
 $query = $dbh->prepare($sql);
@@ -97,9 +63,6 @@ if (!is_array($data)) {
 }
 $requiredFields = [
     'name', 'mobile'
-    // , 'branch', 'title', 'referral_url',
-    // 'utm_tag_source', 'utm_medium', 'utm_campaign', 'utm_term',
-    // 'search_term', 'location', 'type', 'source'
 ];
 
 foreach ($requiredFields as $field) {
@@ -120,6 +83,8 @@ if (!preg_match('/^[0-9]{10}$/', $data['mobile'])) {
     ]);
     exit;
 }
+include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/qr/generate.php';
+$qrcode = generateQRCode($data['mobile']);
 $query->bindParam(':registration_no', $registration_no);
 $query->bindParam(':name', $data['name']);
 $query->bindParam(':mobile', $data['mobile']);
@@ -130,6 +95,7 @@ $query->bindParam(':occupation', $data['occupation']);
 $query->bindParam(':address', $data['address']);
 $query->bindParam(':pincode', $data['pincode']);
 $query->bindParam(':signature', $data['signature']);
+$query->bindParam(':qrcode', $qrcode);
 $query->bindParam(':terms_accepted', $data['terms']);
 $query->bindParam(':payment_type', $data['payment_method']);
 $query->bindParam(':payment_id', $payment_id);
@@ -143,6 +109,9 @@ $query->execute();
 $responseData = $data;             
 $responseData['register_no'] = $registration_no;  
 $responseData['payment_id'] = $payment_id;
+$responseData['qr_code'] = $qrcode;
+$responseData['booking_pay_id']=$tnX;
+
 $user_id = $dbh->lastInsertId() ?? null;
 
 
