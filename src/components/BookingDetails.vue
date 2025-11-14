@@ -12,6 +12,7 @@ onMounted(() => {
     router.push("/");
   }
 });
+console.log(booking);
 </script>
 
 <template>
@@ -41,8 +42,8 @@ onMounted(() => {
             </div>
             <div class="detail__grp flex mt-4 items-center justify-end">
               <img
-                v-if="booking.data.qr_code"
-                :src="JSON.parse(booking.data.qr_code)"
+                v-if="booking.qr_code"
+                :src="JSON.parse(booking.qr_code)"
                 alt="QR Code"
                 class="w-[150px] h-[150px]"
               />
@@ -58,7 +59,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.name }}
+                  {{ booking.patient_name }}
                 </p>
               </div>
             </div>
@@ -71,35 +72,28 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.register_no }}
+                  {{ booking.registration_no }}
                 </p>
               </div>
             </div>
-            <!-- <div class="detail__grp flex mt-4">
+            <div class="detail__grp flex mt-4">
               <div class="w-5/12">
-                <p class="text-[#1b1718] text-[14px] font-[400]">
-                  Transaction No
-                </p>
+                <p class="text-[#1b1718] text-[14px] font-[400]">Invoice No</p>
               </div>
               <div class="w-7/12">
-                <p
-                  v-if="booking.data.payment_method != 'offline'"
-                  class="text-[#1b1718] text-[14px] font-[400]"
-                >
-                  {{ booking.data.booking_pay_id }}
-                </p>
-                <p v-else class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.offline_transaction_id }}
+                <p class="text-[#1b1718] text-[14px] font-[400]">
+                  {{ booking.invoice_no ?? "" }}
                 </p>
               </div>
-            </div> -->
+            </div>
+
             <div class="detail__grp flex mt-4">
               <div class="w-5/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">Mobile No</p>
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.mobile }}
+                  {{ booking.mobile }}
                 </p>
               </div>
             </div>
@@ -109,7 +103,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.gender }}
+                  {{ booking.gender }}
                 </p>
               </div>
             </div>
@@ -119,7 +113,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.email }}
+                  {{ booking.email }}
                 </p>
               </div>
             </div>
@@ -129,7 +123,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.dob }}
+                  {{ booking.dob }}
                 </p>
               </div>
             </div>
@@ -139,7 +133,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.occupation }}
+                  {{ booking.occupation }}
                 </p>
               </div>
             </div>
@@ -149,17 +143,7 @@ onMounted(() => {
               </div>
               <div class="w-7/12">
                 <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.address }}
-                </p>
-              </div>
-            </div>
-            <div class="detail__grp flex mt-4">
-              <div class="w-5/12">
-                <p class="text-[#1b1718] text-[14px] font-[400]">Pincode</p>
-              </div>
-              <div class="w-7/12">
-                <p class="text-[#1b1718] text-[14px] font-[400]">
-                  {{ booking.data.pincode }}
+                  {{ booking.address }}
                 </p>
               </div>
             </div>

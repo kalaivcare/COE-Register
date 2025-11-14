@@ -1,139 +1,70 @@
 <?php
+header("Content-Type: application/json");
 include $_SERVER['DOCUMENT_ROOT'] . '/coeapi/db.php';
-
 include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/Token.php';
 
-if (isset($data['payment_id']) && $data['payment_id'] != null) {
-    
-   
-    $sql1 = "SELECT id FROM payment WHERE payment_id = :payment_id";
-    $query1 = $dbh->prepare($sql1);
-    $query1->bindParam(':payment_id', $data['payment_id']);
-    $query1->execute();
-
-    $result = $query1->fetch(PDO::FETCH_ASSOC);
-   
-    
-    if ($result) {
-       
-        $payment_id = $result['id'];
-    } else {
-      
-        $payment_id = NULL;
-       
-    }
-} else {
-    $payment_id = NULL;
-}
-
-
-
 try {
-$prefix = "VCEC";
-$yearCode = date('y') . (date('y') + 1);
-
-$sqlReg = "SELECT registration_no FROM registrations ORDER BY id DESC LIMIT 1";
-$stmtReg = $dbh->prepare($sqlReg);
-$stmtReg->execute();
-$lastReg = $stmtReg->fetch(PDO::FETCH_ASSOC);
-
-if ($lastReg && isset($lastReg['registration_no'])) {
-   
-    $lastNumber = intval(substr($lastReg['registration_no'], -6));
-    $newNumber = $lastNumber + 1;
-} else {
-    $newNumber = 1;
-}
-$tnX=$data['payment_id'];
-$numberPart = str_pad($newNumber, 6, '0', STR_PAD_LEFT);
-$registration_no = $prefix . $yearCode . $numberPart;
-    
-$sql = "INSERT INTO registrations (registration_no,name,mobile,gender,email, dob,occupation,address,pincode,signature,qr_code,
-terms_accepted,payment_type,payment_id,consultant_id,medium_id,registration_type,email_alert,whatsapp_alert,
-created_at,updated_at) VALUES (:registration_no,:name,:mobile,  :gender,:email,:dob,:occupation,:address,:pincode,
-    :signature,:qrcode,:terms_accepted,:payment_type,:payment_id,:consultant_id,:medium_id,:registration_type,:email_alert,
-:whatsapp_alert,NOW(),NOW())";
-
-
-
-$query = $dbh->prepare($sql);
-if (!is_array($data)) {
-    echo json_encode(["status" => 400, "error" => true, "message" => "Invalid JSON format"]);
-    exit;
-}
-$requiredFields = [
-    'name', 'mobile'
-];
-
-foreach ($requiredFields as $field) {
-    if (!isset($data[$field]) || trim($data[$field]) === '') {
-        echo json_encode([
-            "status" => 403,
-            "error" => true,
-            "message" => ucfirst(str_replace('_', ' ', $field)) . " is required"
-        ]);
+    if (!$data) {
+        echo json_encode(["status" => 400, "error" => true, "message" => "Invalid JSON input"]);
         exit;
     }
-}
-if (!preg_match('/^[0-9]{10}$/', $data['mobile'])) {
+
+    if (empty($data['registration_id'])) {
+        echo json_encode(["status" => 400, "error" => true, "message" => "Registration ID is required"]);
+        exit;
+    }
+    $sqlCheck = "SELECT id FROM registrations WHERE registration_no = :registration_no OR id = :registration_id";
+    $check = $dbh->prepare($sqlCheck);
+    $check->bindParam(':registration_no', $data['registration_id']);
+    $check->bindParam(':registration_id', $data['registration_id']);
+    $check->execute();
+
+    if (!$check->fetch()) {
+        echo json_encode(["status" => 404, "error" => true, "message" => "Registration not found"]);
+        exit;
+    }
+
+    $sql = "UPDATE registrations SET 
+                consultant_id = :consultant_id,
+                medium_id = :medium_id,
+                registration_type = :care_type,
+                email_alert = :email_confirm,
+                whatsapp_alert = :whatsapp_confirm,
+                diagnosis_consent=:diagnosis_consent,
+                medical_consent=:medical_consent,
+                medical_sign=:medical_sign,
+                diagnosis_sign=:diagnosis_sign,
+
+                updated_at = NOW()
+            WHERE registration_no = :registration_id OR id = :registration_id";
+
+    $query = $dbh->prepare($sql);
+    $query->bindParam(':consultant_id', $data['consultant_id']);
+    $query->bindParam(':medium_id', $data['medium_id']);
+    $query->bindParam(':care_type', $data['care_type']);
+    $query->bindParam(':email_confirm', $data['email_confirm']);
+    $query->bindParam(':whatsapp_confirm', $data['whatsapp_confirm']);
+    $query->bindParam(':registration_id', $data['registration_id']);
+    $query->bindParam(':diagnosis_consent', $data['diagnosis_consent']);
+    $query->bindParam(':medical_consent', $data['medical_consent']);
+    $query->bindParam(':medical_sign', $data['medical_sign']);
+    $query->bindParam(':diagnosis_sign', $data['diagnosis_sign']);
+
+
+
+    $query->execute();
+
     echo json_encode([
-        "status" => 403,
-        "error" => true,
-        "message" => "Mobile number must be 10 digits"
+        "status" => 200,
+        "error" => false,
+        "message" => "Registration updated successfully!",
+        "data" => $data
     ]);
-    exit;
-}
-include_once $_SERVER['DOCUMENT_ROOT'].'/coeapi/qr/generate.php';
-$qrcode = generateQRCode($data['mobile']);
-$query->bindParam(':registration_no', $registration_no);
-$query->bindParam(':name', $data['name']);
-$query->bindParam(':mobile', $data['mobile']);
-$query->bindParam(':gender', $data['gender']);
-$query->bindParam(':email', $data['email']);
-$query->bindParam(':dob', $data['dob']);
-$query->bindParam(':occupation', $data['occupation']);
-$query->bindParam(':address', $data['address']);
-$query->bindParam(':pincode', $data['pincode']);
-$query->bindParam(':signature', $data['signature']);
-$query->bindParam(':qrcode', $qrcode);
-$query->bindParam(':terms_accepted', $data['terms']);
-$query->bindParam(':payment_type', $data['payment_method']);
-$query->bindParam(':payment_id', $payment_id);
-$query->bindParam(':consultant_id', $data['consultant']);
-$query->bindParam(':medium_id', $data['medium']);
-$query->bindParam(':registration_type', $data['care']);
-$query->bindParam(':email_alert', $data['email_confirm']);
-$query->bindParam(':whatsapp_alert', $data['whatsapp_confirm']);
-
-$query->execute();
-$responseData = $data;             
-$responseData['register_no'] = $registration_no;  
-$responseData['payment_id'] = $payment_id;
-$responseData['qr_code'] = $qrcode;
-$responseData['booking_pay_id']=$tnX;
-
-$user_id = $dbh->lastInsertId() ?? null;
-
-
-   
-$sql3 = "INSERT INTO appointments (patient_id,doctor_id)
- VALUES (:patient_id,:doctor_id)";
-
-
-$query3 = $dbh->prepare($sql3);
-$query3->bindParam(':patient_id', $user_id);
-$query3->bindParam(':doctor_id', $data['consultant']);
-
-if($query3->execute())
-{
-    
-    echo json_encode(["status"=>200,"error"=>false,"message"=>"Inserted successfully!",  "data" => $responseData]);
-}
-
-
-
-
 
 } catch (Exception $e) {
-     echo json_encode(["status"=>500,"error"=>true,"message"=>$e->getMessage(),"data"=>[]]);
+    echo json_encode([
+        "status" => 500,
+        "error" => true,
+        "message" => $e->getMessage()
+    ]);
 }
