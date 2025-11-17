@@ -250,9 +250,8 @@ canvas {
                     </p>
                   </div>
                   <div class="col-span-6">
-                    <p class="mb-2 font-semibold">Gender</p>
-
                     <div class="flex items-center gap-6">
+                      <p class="mb-2 font-semibold">Gender</p>
                       <label class="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -1354,6 +1353,7 @@ async function saveConfirmStep() {
       medical_consent: formData.medical_consent,
       medical_sign: formData.medical_signature,
       diagnosis_sign: formData.diagnosis_signature,
+      payment_mode: formData.payment_method,
     };
 
     const { res, data } = await apiRequest("/register", "POST", payload);

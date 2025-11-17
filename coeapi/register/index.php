@@ -34,6 +34,8 @@ try {
                 medical_consent=:medical_consent,
                 medical_sign=:medical_sign,
                 diagnosis_sign=:diagnosis_sign,
+                payment_type=:payment_type,
+                
 
                 updated_at = NOW()
             WHERE registration_no = :registration_id OR id = :registration_id";
@@ -49,6 +51,8 @@ try {
     $query->bindParam(':medical_consent', $data['medical_consent']);
     $query->bindParam(':medical_sign', $data['medical_sign']);
     $query->bindParam(':diagnosis_sign', $data['diagnosis_sign']);
+    $query->bindParam(':payment_type', $data['payment_mode']);
+
 
 
 
